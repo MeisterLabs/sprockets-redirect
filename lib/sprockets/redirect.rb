@@ -91,7 +91,10 @@ module Sprockets
 
     def computed_asset_host
       if @asset_host.respond_to?(:call)
-        host = @asset_host.call(@request)
+        arity = @asset_host.respond_to?(:arity) ? @asset_host.arity : @asset_host.method(:call).arity
+        args = [logical_path]
+        args << @request if @request && (arity > 1 || arity < 0)
+        host = @asset_host.call(*args)
       else
         host = @asset_host
       end

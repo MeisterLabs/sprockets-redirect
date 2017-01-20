@@ -71,8 +71,25 @@ class TestRedirect < Test::Unit::TestCase
   end
 
   def test_setting_asset_host_proc
+    build_app(:asset_host => proc { |source|
+      if source == "application.js"
+        "http://test.cloudfront.net"
+      end
+    })
+
+    get "http://example.org/assets/application.js"
+    assert_equal "http://test.cloudfront.net/assets/application-1a2b3c4d5e.js",
+      last_response.headers['Location']
+
+    get "http://example.org/assets/another-application.js"
+    assert_equal "http://example.org/assets/another-application-1a2b3c4d5e.js",
+      last_response.headers['Location']
+  end
+
+  def test_setting_asset_host_proc_arity
     build_app(
-      :asset_host => Proc.new do |request|
+      :asset_host => Proc.new do |source, request|
+        Digest::MD5.hexdigest(source)
         if request.path.end_with?("/application.js")
           "http://test.cloudfront.net"
         end
@@ -88,10 +105,11 @@ class TestRedirect < Test::Unit::TestCase
       last_response.headers['Location']
   end
 
+
   def test_setting_asset_host_proc_without_protocol
     build_app(
-      :asset_host => Proc.new do |request|
-        if request.path.end_with?("/application.js")
+      :asset_host => Proc.new do |source|
+        if source == "application.js"
           "test.cloudfront.net"
         end
       end
